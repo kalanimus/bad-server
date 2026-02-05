@@ -29,6 +29,20 @@ export const getOrders = async (
             search,
         } = req.query
 
+        const pageNum = Number(page)
+        const limitNum = Math.min(Number(limit), 50)
+
+        if (isNaN(pageNum) || pageNum < 1) {
+            return next(new BadRequestError('Параметр page должен быть положительным числом'))
+        }
+
+        if (isNaN(limitNum) || limitNum < 1) {
+            return next(new BadRequestError('Параметр limit должен быть положительным числом'))
+        }
+
+        const allowedSortFields = ['createdAt', 'totalAmount', 'orderNumber', 'status']
+        const validSortField = allowedSortFields.includes(sortField as string) ? sortField as string : 'createdAt' 
+
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
@@ -122,14 +136,14 @@ export const getOrders = async (
 
         const sort: { [key: string]: any } = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (validSortField && sortOrder) {
+            sort[validSortField as string] = sortOrder === 'desc' ? -1 : 1
         }
 
         aggregatePipeline.push(
             { $sort: sort },
-            { $skip: (Number(page) - 1) * Number(limit) },
-            { $limit: Number(limit) },
+            { $skip: (pageNum - 1) * limitNum },
+            { $limit: limitNum },
             {
                 $group: {
                     _id: '$_id',
@@ -145,15 +159,15 @@ export const getOrders = async (
 
         const orders = await Order.aggregate(aggregatePipeline)
         const totalOrders = await Order.countDocuments(filters)
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / limitNum)
 
         res.status(200).json({
             orders,
             pagination: {
                 totalOrders,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: pageNum,
+                pageSize: limitNum,
             },
         })
     } catch (error) {
@@ -197,7 +211,8 @@ export const getOrdersCurrentUser = async (
 
         if (search) {
             // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
-            const searchRegex = new RegExp(search as string, 'i')
+            const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const searchNumber = Number(search)
             const products = await Product.find({ title: searchRegex })
             const productIds = products.map((product) => product._id)
@@ -327,11 +342,13 @@ export const createOrder = async (
             allowedSchemes: [],
         })
 
+        const sanitizedPhone = phone?.replace(/[^\d+\-() ]/g, '') || ''
+
         const newOrder = new Order({
             totalAmount: total,
             products: items,
             payment,
-            phone,
+            phone: sanitizedPhone,
             email,
             comment: sanitizedComment,
             customer: userId,
