@@ -3,7 +3,7 @@ import { FilterQuery } from 'mongoose'
 import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
-import BadRequestError from 'errors/bad-request-error'
+import BadRequestError from '../errors/bad-request-error'
 
 // TODO: Добавить guard admin
 // eslint-disable-next-line max-len
