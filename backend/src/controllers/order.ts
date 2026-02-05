@@ -33,19 +33,37 @@ export const getOrders = async (
         const limitNum = Math.min(Number(limit), 10)
 
         if (isNaN(pageNum) || pageNum < 1) {
-            return next(new BadRequestError('Параметр page должен быть положительным числом'))
+            return next(
+                new BadRequestError(
+                    'Параметр page должен быть положительным числом'
+                )
+            )
         }
 
         if (isNaN(limitNum) || limitNum < 1) {
-            return next(new BadRequestError('Параметр limit должен быть положительным числом'))
+            return next(
+                new BadRequestError(
+                    'Параметр limit должен быть положительным числом'
+                )
+            )
         }
 
-        const allowedSortFields = ['createdAt', 'totalAmount', 'orderNumber', 'status']
-        const validSortField = allowedSortFields.includes(sortField as string) ? sortField as string : 'createdAt' 
-       
+        const allowedSortFields = [
+            'createdAt',
+            'totalAmount',
+            'orderNumber',
+            'status',
+        ]
+
         if (sortField && !allowedSortFields.includes(sortField as string)) {
-            return next(new BadRequestError('Недопустимое поле для сортировки'))
-}
+                    return next(new BadRequestError('Недопустимое поле для сортировки'))
+                }
+
+        const validSortField = allowedSortFields.includes(sortField as string)
+            ? (sortField as string)
+            : 'createdAt'
+
+        
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
@@ -214,7 +232,8 @@ export const getOrdersCurrentUser = async (
 
         if (search) {
             // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
-            const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const escapeRegex = (str: string) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const searchNumber = Number(search)
             const products = await Product.find({ title: searchRegex })
