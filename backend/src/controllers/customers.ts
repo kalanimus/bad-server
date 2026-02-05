@@ -31,7 +31,7 @@ export const getCustomers = async (
         } = req.query
 
         const pageNum = Number(page)
-        const limitNum = Math.min(Number(limit), 50)
+        const limitNum = Math.min(Number(limit), 10)
 
         if (isNaN(pageNum) || pageNum < 1) {
             return next(

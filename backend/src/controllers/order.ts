@@ -30,7 +30,7 @@ export const getOrders = async (
         } = req.query
 
         const pageNum = Number(page)
-        const limitNum = Math.min(Number(limit), 50)
+        const limitNum = Math.min(Number(limit), 10)
 
         if (isNaN(pageNum) || pageNum < 1) {
             return next(new BadRequestError('Параметр page должен быть положительным числом'))
@@ -42,7 +42,10 @@ export const getOrders = async (
 
         const allowedSortFields = ['createdAt', 'totalAmount', 'orderNumber', 'status']
         const validSortField = allowedSortFields.includes(sortField as string) ? sortField as string : 'createdAt' 
-
+       
+        if (sortField && !allowedSortFields.includes(sortField as string)) {
+            return next(new BadRequestError('Недопустимое поле для сортировки'))
+}
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
