@@ -418,6 +418,10 @@ export const createOrder = async (
         const sanitizedPhone =
             typeof phone === 'string' ? phone.replace(/[^\d+\-() ]/g, '') : ''
 
+        if (phone && phone.length > 20) {
+            return next(new BadRequestError('Телефон слишком длинный'))
+        }
+        
         const newOrder = new Order({
             totalAmount: total,
             products: items,
