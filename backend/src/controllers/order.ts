@@ -71,13 +71,23 @@ export const getOrders = async (
 
         const filters: FilterQuery<Partial<IOrder>> = {}
 
-        if (status) {
-            if (typeof status === 'string') {
-                filters.status = status
+        if (status !== undefined) {
+            if (typeof status !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра status')
+                )
             }
+            filters.status = status
         }
 
-        if (totalAmountFrom) {
+        if (totalAmountFrom !== undefined) {
+            if (typeof totalAmountFrom !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра totalAmountFrom'
+                    )
+                )
+            }
             const amount = Number(totalAmountFrom)
             if (isNaN(amount)) {
                 return next(
@@ -90,7 +100,14 @@ export const getOrders = async (
             }
         }
 
-        if (totalAmountTo) {
+        if (totalAmountTo !== undefined) {
+            if (typeof totalAmountTo !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра totalAmountTo'
+                    )
+                )
+            }
             const amount = Number(totalAmountTo)
             if (isNaN(amount)) {
                 return next(
@@ -103,17 +120,31 @@ export const getOrders = async (
             }
         }
 
-        if (orderDateFrom) {
+        if (orderDateFrom !== undefined) {
+            if (typeof orderDateFrom !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра orderDateFrom'
+                    )
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $gte: new Date(orderDateFrom as string),
+                $gte: new Date(orderDateFrom),
             }
         }
 
-        if (orderDateTo) {
+        if (orderDateTo !== undefined) {
+            if (typeof orderDateTo !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра orderDateTo'
+                    )
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $lte: new Date(orderDateTo as string),
+                $lte: new Date(orderDateTo),
             }
         }
 
@@ -139,7 +170,12 @@ export const getOrders = async (
             { $unwind: '$products' },
         ]
 
-        if (search) {
+        if (search !== undefined) {
+            if (typeof search !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра search')
+                )
+            }
             const escapeRegex = (str: string) =>
                 str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             const searchRegex = new RegExp(escapeRegex(search as string), 'i')
@@ -161,6 +197,12 @@ export const getOrders = async (
         }
 
         const sort: { [key: string]: any } = {}
+
+        if (sortOrder !== undefined && typeof sortOrder !== 'string') {
+            return next(
+                new BadRequestError('Недопустимый тип параметра sortOrder')
+            )
+        }
 
         if (validSortField && sortOrder) {
             sort[validSortField as string] = sortOrder === 'desc' ? -1 : 1
