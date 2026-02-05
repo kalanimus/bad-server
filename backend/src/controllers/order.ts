@@ -55,15 +55,20 @@ export const getOrders = async (
             'status',
         ]
 
-        if (sortField && !allowedSortFields.includes(sortField as string)) {
-                    return next(new BadRequestError('Недопустимое поле для сортировки'))
-                }
+        if (
+            sortField &&
+            (typeof sortField !== 'string' ||
+                !allowedSortFields.includes(sortField))
+        ) {
+            return next(new BadRequestError('Недопустимое поле для сортировки'))
+        }
 
-        const validSortField = allowedSortFields.includes(sortField as string)
-            ? (sortField as string)
-            : 'createdAt'
+        const validSortField =
+            typeof sortField === 'string' &&
+            allowedSortFields.includes(sortField)
+                ? sortField
+                : 'createdAt'
 
-        
         const filters: FilterQuery<Partial<IOrder>> = {}
 
         if (status) {
@@ -364,7 +369,12 @@ export const createOrder = async (
             allowedSchemes: [],
         })
 
-        const sanitizedPhone = phone?.replace(/[^\d+\-() ]/g, '') || ''
+        if (phone && typeof phone !== 'string') {
+            return next(new BadRequestError('Недопустимый тип поля phone'))
+        }
+
+        const sanitizedPhone =
+            typeof phone === 'string' ? phone.replace(/[^\d+\-() ]/g, '') : ''
 
         const newOrder = new Order({
             totalAmount: total,
