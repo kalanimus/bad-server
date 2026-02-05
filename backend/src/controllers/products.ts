@@ -12,20 +12,31 @@ import movingFile from '../utils/movingFile'
 const getProducts = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { page = 1, limit = 5 } = req.query
+
+        const pageNum = Number(page)
+        const limitNum = Number(limit)
+        
+        if (isNaN(pageNum) || pageNum < 1) {
+            return next(new BadRequestError('Параметр page должен быть положительным числом'))
+        }
+        
+        if (isNaN(limitNum) || limitNum < 1) {
+            return next(new BadRequestError('Параметр limit должен быть положительным числом'))
+        }
         const options = {
-            skip: (Number(page) - 1) * Number(limit),
-            limit: Number(limit),
+            skip: (pageNum - 1) * limitNum,
+            limit: limitNum,
         }
         const products = await Product.find({}, null, options)
         const totalProducts = await Product.countDocuments({})
-        const totalPages = Math.ceil(totalProducts / Number(limit))
+        const totalPages = Math.ceil(totalProducts / limitNum)
         return res.send({
             items: products,
             pagination: {
                 totalProducts,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: pageNum,
+                pageSize: limitNum,
             },
         })
     } catch (err) {
@@ -61,7 +72,7 @@ const createProduct = async (
         return res.status(constants.HTTP_STATUS_CREATED).send(product)
     } catch (error) {
         if (error instanceof MongooseError.ValidationError) {
-            return next(new BadRequestError(error.message))
+            return next(new BadRequestError('Ошибка валидации данных товара'))
         }
         if (error instanceof Error && error.message.includes('E11000')) {
             return next(
@@ -106,7 +117,7 @@ const updateProduct = async (
         return res.send(product)
     } catch (error) {
         if (error instanceof MongooseError.ValidationError) {
-            return next(new BadRequestError(error.message))
+            return next(new BadRequestError('Ошибка валидации данных товара'))
         }
         if (error instanceof MongooseError.CastError) {
             return next(new BadRequestError('Передан не валидный ID товара'))

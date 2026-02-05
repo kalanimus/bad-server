@@ -29,6 +29,11 @@ export const getCustomers = async (
             search,
         } = req.query
 
+        const allowedSortFields = ['createdAt', 'totalAmount', 'orderCount', 'lastOrderDate', 'name']
+        const validSortField = allowedSortFields.includes(sortField as string) 
+            ? sortField as string 
+            : 'createdAt'
+
         const filters: FilterQuery<Partial<IUser>> = {}
 
         if (registrationDateFrom) {
@@ -110,8 +115,8 @@ export const getCustomers = async (
 
         const sort: { [key: string]: any } = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (validSortField  && sortOrder) {
+            sort[validSortField  as string] = sortOrder === 'desc' ? -1 : 1
         }
 
         const options = {
@@ -179,11 +184,13 @@ export const updateCustomer = async (
     next: NextFunction
 ) => {
     try {
+        const { name, phone } = req.body
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            { name, phone },
             {
                 new: true,
+                runValidators: true
             }
         )
             .orFail(

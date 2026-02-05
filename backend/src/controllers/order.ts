@@ -7,7 +7,6 @@ import Product, { IProduct } from '../models/product'
 import User from '../models/user'
 import sanitizeHtml from 'sanitize-html'
 
-
 // eslint-disable-next-line max-len
 // GET /orders?page=2&limit=5&sort=totalAmount&order=desc&orderDateFrom=2024-07-01&orderDateTo=2024-08-01&status=delivering&totalAmountFrom=100&totalAmountTo=1000&search=%2B1
 
@@ -39,16 +38,28 @@ export const getOrders = async (
         }
 
         if (totalAmountFrom) {
+            const amount = Number(totalAmountFrom)
+            if (isNaN(amount)) {
+                return next(
+                    new BadRequestError('Невалидное значение totalAmountFrom')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $gte: Number(totalAmountFrom),
+                $gte: amount,
             }
         }
 
         if (totalAmountTo) {
+            const amount = Number(totalAmountTo)
+            if (isNaN(amount)) {
+                return next(
+                    new BadRequestError('Невалидное значение totalAmountTo')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $lte: Number(totalAmountTo),
+                $lte: amount,
             }
         }
 
@@ -89,7 +100,9 @@ export const getOrders = async (
         ]
 
         if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+            const escapeRegex = (str: string) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const searchNumber = Number(search)
 
             const searchConditions: any[] = [{ 'products.title': searchRegex }]
@@ -311,7 +324,7 @@ export const createOrder = async (
         const sanitizedComment = sanitizeHtml(comment || '', {
             allowedTags: ['b', 'i', 'em', 'strong', 'u', 'br', 'p'],
             allowedAttributes: {},
-            allowedSchemes: []
+            allowedSchemes: [],
         })
 
         const newOrder = new Order({
