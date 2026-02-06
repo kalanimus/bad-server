@@ -383,6 +383,7 @@ export const createOrder = async (
     res: Response,
     next: NextFunction
 ) => {
+    console.log('=== createOrder called ===', req.body)
     try {
         const basket: IProduct[] = []
         const products = await Product.find<IProduct>({})
@@ -411,17 +412,11 @@ export const createOrder = async (
             allowedSchemes: [],
         })
 
-        if (phone && typeof phone !== 'string') {
-            return next(new BadRequestError('Недопустимый тип поля phone'))
-        }
-
         const sanitizedPhone =
             typeof phone === 'string' ? phone.replace(/[^\d+\-() ]/g, '') : ''
 
-        if (phone && phone.length > 20) {
-            return next(new BadRequestError('Телефон слишком длинный'))
-        }
         
+
         const newOrder = new Order({
             totalAmount: total,
             products: items,

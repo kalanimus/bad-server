@@ -19,7 +19,10 @@ app.set('trust proxy', true)
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { trustProxy: false }
 })
 
 app.use(limiter)
@@ -52,6 +55,7 @@ app.use((req, res, next) => {
     
     next();
 });
+
 app.use(routes)
 app.use(errors())
 app.use(errorHandler)
