@@ -5,6 +5,7 @@ import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder } from '../models/order'
 import Product, { IProduct } from '../models/product'
 import User from '../models/user'
+import sanitizeHtml from 'sanitize-html'
 
 // eslint-disable-next-line max-len
 // GET /orders?page=2&limit=5&sort=totalAmount&order=desc&orderDateFrom=2024-07-01&orderDateTo=2024-08-01&status=delivering&totalAmountFrom=100&totalAmountTo=1000&search=%2B1
@@ -28,42 +29,122 @@ export const getOrders = async (
             search,
         } = req.query
 
+        const pageNum = Number(page)
+        const limitNum = Math.min(Number(limit), 10)
+
+        if (isNaN(pageNum) || pageNum < 1) {
+            return next(
+                new BadRequestError(
+                    'Параметр page должен быть положительным числом'
+                )
+            )
+        }
+
+        if (isNaN(limitNum) || limitNum < 1) {
+            return next(
+                new BadRequestError(
+                    'Параметр limit должен быть положительным числом'
+                )
+            )
+        }
+
+        const allowedSortFields = [
+            'createdAt',
+            'totalAmount',
+            'orderNumber',
+            'status',
+        ]
+
+        if (
+            sortField &&
+            (typeof sortField !== 'string' ||
+                !allowedSortFields.includes(sortField))
+        ) {
+            return next(new BadRequestError('Недопустимое поле для сортировки'))
+        }
+
+        const validSortField =
+            typeof sortField === 'string' &&
+            allowedSortFields.includes(sortField)
+                ? sortField
+                : 'createdAt'
+
         const filters: FilterQuery<Partial<IOrder>> = {}
 
-        if (status) {
-            if (typeof status === 'object') {
-                Object.assign(filters, status)
+        if (status !== undefined) {
+            if (typeof status !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра status')
+                )
             }
-            if (typeof status === 'string') {
-                filters.status = status
-            }
+            filters.status = status
         }
 
-        if (totalAmountFrom) {
+        if (totalAmountFrom !== undefined) {
+            if (typeof totalAmountFrom !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра totalAmountFrom'
+                    )
+                )
+            }
+            const amount = Number(totalAmountFrom)
+            if (isNaN(amount)) {
+                return next(
+                    new BadRequestError('Невалидное значение totalAmountFrom')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $gte: Number(totalAmountFrom),
+                $gte: amount,
             }
         }
 
-        if (totalAmountTo) {
+        if (totalAmountTo !== undefined) {
+            if (typeof totalAmountTo !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра totalAmountTo'
+                    )
+                )
+            }
+            const amount = Number(totalAmountTo)
+            if (isNaN(amount)) {
+                return next(
+                    new BadRequestError('Невалидное значение totalAmountTo')
+                )
+            }
             filters.totalAmount = {
                 ...filters.totalAmount,
-                $lte: Number(totalAmountTo),
+                $lte: amount,
             }
         }
 
-        if (orderDateFrom) {
+        if (orderDateFrom !== undefined) {
+            if (typeof orderDateFrom !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра orderDateFrom'
+                    )
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $gte: new Date(orderDateFrom as string),
+                $gte: new Date(orderDateFrom),
             }
         }
 
-        if (orderDateTo) {
+        if (orderDateTo !== undefined) {
+            if (typeof orderDateTo !== 'string') {
+                return next(
+                    new BadRequestError(
+                        'Недопустимый тип параметра orderDateTo'
+                    )
+                )
+            }
             filters.createdAt = {
                 ...filters.createdAt,
-                $lte: new Date(orderDateTo as string),
+                $lte: new Date(orderDateTo),
             }
         }
 
@@ -89,8 +170,15 @@ export const getOrders = async (
             { $unwind: '$products' },
         ]
 
-        if (search) {
-            const searchRegex = new RegExp(search as string, 'i')
+        if (search !== undefined) {
+            if (typeof search !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра search')
+                )
+            }
+            const escapeRegex = (str: string) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const searchNumber = Number(search)
 
             const searchConditions: any[] = [{ 'products.title': searchRegex }]
@@ -110,14 +198,20 @@ export const getOrders = async (
 
         const sort: { [key: string]: any } = {}
 
-        if (sortField && sortOrder) {
-            sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
+        if (sortOrder !== undefined && typeof sortOrder !== 'string') {
+            return next(
+                new BadRequestError('Недопустимый тип параметра sortOrder')
+            )
+        }
+
+        if (validSortField && sortOrder) {
+            sort[validSortField as string] = sortOrder === 'desc' ? -1 : 1
         }
 
         aggregatePipeline.push(
             { $sort: sort },
-            { $skip: (Number(page) - 1) * Number(limit) },
-            { $limit: Number(limit) },
+            { $skip: (pageNum - 1) * limitNum },
+            { $limit: limitNum },
             {
                 $group: {
                     _id: '$_id',
@@ -133,15 +227,15 @@ export const getOrders = async (
 
         const orders = await Order.aggregate(aggregatePipeline)
         const totalOrders = await Order.countDocuments(filters)
-        const totalPages = Math.ceil(totalOrders / Number(limit))
+        const totalPages = Math.ceil(totalOrders / limitNum)
 
         res.status(200).json({
             orders,
             pagination: {
                 totalOrders,
                 totalPages,
-                currentPage: Number(page),
-                pageSize: Number(limit),
+                currentPage: pageNum,
+                pageSize: limitNum,
             },
         })
     } catch (error) {
@@ -185,7 +279,14 @@ export const getOrdersCurrentUser = async (
 
         if (search) {
             // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
-            const searchRegex = new RegExp(search as string, 'i')
+            if (typeof search !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра search')
+                )
+            }
+            const escapeRegex = (str: string) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const searchNumber = Number(search)
             const products = await Product.find({ title: searchRegex })
             const productIds = products.map((product) => product._id)
@@ -309,13 +410,22 @@ export const createOrder = async (
             return next(new BadRequestError('Неверная сумма заказа'))
         }
 
+        const sanitizedComment = sanitizeHtml(comment || '', {
+            allowedTags: ['b', 'i', 'em', 'strong', 'u', 'br', 'p'],
+            allowedAttributes: {},
+            allowedSchemes: [],
+        })
+
+        const sanitizedPhone =
+            typeof phone === 'string' ? phone.replace(/[^\d+\-() ]/g, '') : ''
+
         const newOrder = new Order({
             totalAmount: total,
             products: items,
             payment,
-            phone,
+            phone: sanitizedPhone,
             email,
-            comment,
+            comment: sanitizedComment,
             customer: userId,
             deliveryAddress: address,
         })

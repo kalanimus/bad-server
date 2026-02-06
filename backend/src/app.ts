@@ -9,13 +9,31 @@ import { DB_ADDRESS } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
 import routes from './routes'
+import { sanitizeMiddleware } from './middlewares/sanitize'
+import rateLimit from 'express-rate-limit'
 
 const { PORT = 3000 } = process.env
 const app = express()
 
+app.set('trust proxy', true)
+
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { trustProxy: false },
+})
+
+app.use(limiter)
 app.use(cookieParser())
 
-app.use(cors())
+app.use(
+    cors({
+        origin: process.env.ORIGIN_ALLOW || 'http://localhost:5173',
+        credentials: true,
+    })
+)
 // app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
 // app.use(express.static(path.join(__dirname, 'public')));
 
@@ -23,8 +41,23 @@ app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true }))
 app.use(json())
+app.use(sanitizeMiddleware)
 
 app.options('*', cors())
+app.use((req, res, next) => {
+    if (req.method === 'GET') {
+        return next()
+    }
+
+    const origin = req.get('origin') || req.get('referer') || ''
+
+    if (origin && !origin.includes('localhost')) {
+        return res.status(403).json({ message: 'CSRF attack detected' })
+    }
+
+    next()
+})
+
 app.use(routes)
 app.use(errors())
 app.use(errorHandler)
