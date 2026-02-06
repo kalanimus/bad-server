@@ -191,10 +191,14 @@ const updateCurrentUser = async (
     const userId = res.locals.user._id
     const { name, phone } = req.body
     try {
-        const updatedUser = await User.findByIdAndUpdate(userId, { name, phone }, {
-            new: true,
-            runValidators: true
-        }).orFail(
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { name, phone },
+            {
+                new: true,
+                runValidators: true,
+            }
+        ).orFail(
             () =>
                 new NotFoundError(
                     'Пользователь по заданному id отсутствует в базе'
@@ -203,10 +207,14 @@ const updateCurrentUser = async (
         res.status(200).json(updatedUser)
     } catch (error) {
         if (error instanceof MongooseError.ValidationError) {
-            return next(new BadRequestError('Ошибка валидации данных пользователя'))
+            return next(
+                new BadRequestError('Ошибка валидации данных пользователя')
+            )
         }
         if (error instanceof MongooseError.CastError) {
-            return next(new BadRequestError('Передан не валидный ID пользователя'))
+            return next(
+                new BadRequestError('Передан не валидный ID пользователя')
+            )
         }
         next(error)
     }

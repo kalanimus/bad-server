@@ -15,13 +15,21 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
 
         const pageNum = Number(page)
         const limitNum = Number(limit)
-        
+
         if (isNaN(pageNum) || pageNum < 1) {
-            return next(new BadRequestError('Параметр page должен быть положительным числом'))
+            return next(
+                new BadRequestError(
+                    'Параметр page должен быть положительным числом'
+                )
+            )
         }
-        
+
         if (isNaN(limitNum) || limitNum < 1) {
-            return next(new BadRequestError('Параметр limit должен быть положительным числом'))
+            return next(
+                new BadRequestError(
+                    'Параметр limit должен быть положительным числом'
+                )
+            )
         }
         const options = {
             skip: (pageNum - 1) * limitNum,

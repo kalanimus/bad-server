@@ -123,7 +123,8 @@ export const getCustomers = async (
         }
 
         if (search) {
-            const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const escapeRegex = (str: string) =>
+                str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             const searchRegex = new RegExp(escapeRegex(search as string), 'i')
             const orders = await Order.find(
                 {

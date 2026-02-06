@@ -22,16 +22,18 @@ const limiter = rateLimit({
     max: 50,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false }
+    validate: { trustProxy: false },
 })
 
 app.use(limiter)
 app.use(cookieParser())
 
-app.use(cors({
-    origin: process.env.ORIGIN_ALLOW || 'http://localhost:5173',
-    credentials: true
-}))
+app.use(
+    cors({
+        origin: process.env.ORIGIN_ALLOW || 'http://localhost:5173',
+        credentials: true,
+    })
+)
 // app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
 // app.use(express.static(path.join(__dirname, 'public')));
 
@@ -44,17 +46,17 @@ app.use(sanitizeMiddleware)
 app.options('*', cors())
 app.use((req, res, next) => {
     if (req.method === 'GET') {
-        return next();
+        return next()
     }
-    
-    const origin = req.get('origin') || req.get('referer') || '';
-    
+
+    const origin = req.get('origin') || req.get('referer') || ''
+
     if (origin && !origin.includes('localhost')) {
-        return res.status(403).json({ message: 'CSRF attack detected' });
+        return res.status(403).json({ message: 'CSRF attack detected' })
     }
-    
-    next();
-});
+
+    next()
+})
 
 app.use(routes)
 app.use(errors())
