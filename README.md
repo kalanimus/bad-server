@@ -12,3 +12,5 @@ docker compose up -d
 5. На странице http://localhost/login/ можно авторизоваться.
 6. Админка находится по адресу http://localhost/admin/
 
+https://github.com/kalanimus/bad-server
+
