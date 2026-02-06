@@ -279,6 +279,11 @@ export const getOrdersCurrentUser = async (
 
         if (search) {
             // если не экранировать то получаем Invalid regular expression: /+1/i: Nothing to repeat
+            if (typeof search !== 'string') {
+                return next(
+                    new BadRequestError('Недопустимый тип параметра search')
+                )
+            }
             const escapeRegex = (str: string) =>
                 str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             const searchRegex = new RegExp(escapeRegex(search as string), 'i')
@@ -383,7 +388,6 @@ export const createOrder = async (
     res: Response,
     next: NextFunction
 ) => {
-    console.log('=== createOrder called ===', req.body)
     try {
         const basket: IProduct[] = []
         const products = await Product.find<IProduct>({})
@@ -414,8 +418,6 @@ export const createOrder = async (
 
         const sanitizedPhone =
             typeof phone === 'string' ? phone.replace(/[^\d+\-() ]/g, '') : ''
-
-        
 
         const newOrder = new Order({
             totalAmount: total,
